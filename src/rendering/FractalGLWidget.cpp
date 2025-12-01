@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QTouchEvent>
 #include <QWheelEvent>
 #include <cmath>
 
@@ -357,23 +358,80 @@ void FractalGLWidget::wheelEvent(QWheelEvent *event) {
   // Don't call update() here, let animate() handle the interpolation
 }
 
+void FractalGLWidget::printDebugCoordinates() {
+  qDebug() << "--- Debug Coordinates ---";
+  qDebug() << "X:" << QString::number(m_state.zoomCenterX, 'g', 16);
+  qDebug() << "Y:" << QString::number(m_state.zoomCenterY, 'g', 16);
+  qDebug() << "Zoom:" << QString::number(m_state.zoomSize, 'g', 16);
+  qDebug() << "Precision Mode:"
+           << (m_shaderManager.isUsingNativeDoubles() ? "Native Double"
+                                                       : "Float-Float");
+  qDebug() << "Pixel Size:"
+           << QString::number(m_state.zoomSize / height(), 'e', 2);
+  qDebug() << "-------------------------";
+}
+
+void FractalGLWidget::copyCoordinatesToClipboard() {
+  QString coords =
+      QString("X: %1\nY: %2\nZoom: %3\nPrecision: %4\nPixel Size: %5")
+          .arg(QString::number(m_state.zoomCenterX, 'g', 16))
+          .arg(QString::number(m_state.zoomCenterY, 'g', 16))
+          .arg(QString::number(m_state.zoomSize, 'g', 16))
+          .arg(m_shaderManager.isUsingNativeDoubles() ? "Native Double"
+                                                       : "Float-Float")
+          .arg(QString::number(m_state.zoomSize / height(), 'e', 2));
+
+  QApplication::clipboard()->setText(coords);
+  qDebug() << "Coordinates copied to clipboard!";
+  qDebug() << coords;
+}
+
+// Touch event handler for Android
+bool FractalGLWidget::event(QEvent *event) {
+  if (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchEnd ||
+      event->type() == QEvent::TouchUpdate) {
+    QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
+
+    if (event->type() == QEvent::TouchBegin) {
+      m_touchTimer.start();
+      m_touchCount++;
+
+      // Get first touch point position
+      const auto &touchPoints = touchEvent->points();
+      if (!touchPoints.isEmpty()) {
+        m_lastTouchPos = touchPoints.first().position();
+      }
+    } else if (event->type() == QEvent::TouchEnd) {
+      qint64 elapsed = m_touchTimer.elapsed();
+
+      // Double-tap: Copy coordinates (< 300ms between taps)
+      if (m_touchCount == 2 && elapsed < 300) {
+        copyCoordinatesToClipboard();
+        m_touchCount = 0;
+      }
+      // Long press: Print debug info (> 800ms)
+      else if (elapsed > 800) {
+        printDebugCoordinates();
+        m_touchCount = 0;
+      }
+      // Reset counter after delay
+      else {
+        QTimer::singleShot(300, [this]() { m_touchCount = 0; });
+      }
+    }
+
+    return true;
+  }
+
+  return QOpenGLWidget::event(event);
+}
+
 void FractalGLWidget::keyPressEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_P) {
-    qDebug() << "--- Debug Coordinates ---";
-    qDebug() << "X:" << QString::number(m_state.zoomCenterX, 'g', 16);
-    qDebug() << "Y:" << QString::number(m_state.zoomCenterY, 'g', 16);
-    qDebug() << "Zoom:" << QString::number(m_state.zoomSize, 'g', 16);
-    qDebug() << "High Precision:" << (m_state.zoomSize < 0.1);
-    qDebug() << "-------------------------";
+    printDebugCoordinates();
   }
   if (event->key() == Qt::Key_C) {
-    QString coords = QString("X: %1\nY: %2\nZoom: %3")
-                         .arg(QString::number(m_state.zoomCenterX, 'g', 16))
-                         .arg(QString::number(m_state.zoomCenterY, 'g', 16))
-                         .arg(QString::number(m_state.zoomSize, 'g', 16));
-
-    QApplication::clipboard()->setText(coords);
-    qDebug() << "Coordinates copied to clipboard!";
+    copyCoordinatesToClipboard();
   }
   QOpenGLWidget::keyPressEvent(event);
 }

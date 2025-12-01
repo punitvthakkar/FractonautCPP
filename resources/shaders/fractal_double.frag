@@ -99,7 +99,8 @@ void main() {
         if (magnitude_sq > 4.0) {
             escaped = true;
             iterations = float(i);
-            log_zn = float(log(magnitude_sq) / 2.0);
+            // GLSL log() only works with float, not double - cast first
+            log_zn = float(log(float(magnitude_sq)) / 2.0);
             break;
         }
         z.x = x;
