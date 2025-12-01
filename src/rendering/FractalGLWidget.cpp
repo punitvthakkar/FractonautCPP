@@ -115,8 +115,17 @@ void FractalGLWidget::updateUniforms() {
   program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
   program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
 
-  // Other uniforms
-  program->setUniformValue("u_maxIterations", m_state.maxIterations);
+  // Other uniforms - Scale iterations based on zoom for better detail at deep zooms
+  int effectiveIterations = m_state.maxIterations;
+  if (m_state.zoomSize < 1e-6) {
+    // At extreme zooms, increase iterations for better detail
+    effectiveIterations =
+        std::min(10000, static_cast<int>(m_state.maxIterations * 1.5));
+  } else if (m_state.zoomSize < 1e-4) {
+    effectiveIterations =
+        std::min(10000, static_cast<int>(m_state.maxIterations * 1.2));
+  }
+  program->setUniformValue("u_maxIterations", effectiveIterations);
   program->setUniformValue("u_paletteId", m_state.paletteId);
   program->setUniformValue("u_fractalType", m_state.fractalType);
   program->setUniformValue("u_juliaC",
@@ -129,37 +138,62 @@ void FractalGLWidget::updateUniforms() {
       true; // m_state.zoomSize < 0.1 && m_state.fractalType < 2;
   program->setUniformValue("u_highPrecision", highPrecision);
 
-  // DEBUG: Print split values for the coordinates causing issues
+  // DEBUG: Print split values for verification
   static int debugCounter = 0;
   if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
-    // Test coordinate from user report
-    double testVal = -0.9197790506151321;
-    DoubleSplit split = splitDouble(testVal);
-    qDebug() << "--- Split Logic Verification ---";
-    qDebug() << "Input:" << QString::number(testVal, 'g', 17);
-    qDebug() << "Hi:" << QString::number(split.hi, 'g', 9);
-    qDebug() << "Lo:" << QString::number(split.lo, 'g', 9);
-    qDebug() << "Reconstructed:"
-             << QString::number((double)split.hi + (double)split.lo, 'g', 17);
-    qDebug() << "Error:"
-             << QString::number(testVal - ((double)split.hi + (double)split.lo),
-                                'g', 17);
-  }
-
-  // DEBUG: Print split values for the coordinates causing issues
-  // static int debugCounter = 0; // This was moved above
-  if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
-    qDebug() << "Center X:" << m_state.zoomCenterX;
-    qDebug() << "Split X:" << centerX.hi << centerX.lo;
+    qDebug() << "=== PRECISION DEBUG ===";
+    qDebug() << "Center X:" << QString::number(m_state.zoomCenterX, 'g', 17);
+    qDebug() << "  Split Hi:" << QString::number(centerX.hi, 'g', 9);
+    qDebug() << "  Split Lo:" << QString::number(centerX.lo, 'g', 9);
+    qDebug() << "  Reconstructed:"
+             << QString::number((double)centerX.hi + (double)centerX.lo, 'g',
+                                17);
+    qDebug() << "  Error:"
+             << QString::number(
+                    m_state.zoomCenterX -
+                        ((double)centerX.hi + (double)centerX.lo),
+                    'g', 9);
+    qDebug() << "Zoom Size:" << QString::number(m_state.zoomSize, 'g', 9);
+    qDebug() << "  Split Hi:" << QString::number(zoomSize.hi, 'g', 9);
+    qDebug() << "  Split Lo:" << QString::number(zoomSize.lo, 'g', 9);
     qDebug() << "High Precision:" << highPrecision;
+    qDebug() << "======================";
   }
 }
 
 FractalGLWidget::DoubleSplit FractalGLWidget::splitDouble(double value) {
-  // Emulate splitDouble from JS/GLSL
-  // Simple cast method is most robust for passing double as two floats
+  // Proper Dekker-style split for double -> float-float conversion
+  // This creates a non-overlapping representation where hi + lo = value
+  // with minimal precision loss
+
+  // Step 1: Get the high part (first float approximation)
   float hi = static_cast<float>(value);
-  float lo = static_cast<float>(value - static_cast<double>(hi));
+
+  // Step 2: Compute the residual in double precision (critical!)
+  // This captures all the bits that didn't fit in the float
+  double hi_as_double = static_cast<double>(hi);
+  double residual = value - hi_as_double;
+
+  // Step 3: Get the low part (what remains)
+  float lo = static_cast<float>(residual);
+
+  // Step 4: Renormalize for non-overlapping representation
+  // This ensures hi and lo don't overlap in their bit representation
+  // Uses the "quick-two-sum" algorithm
+  double sum_d = static_cast<double>(hi) + static_cast<double>(lo);
+  float sum_f = static_cast<float>(sum_d);
+
+  // Compute the error in the sum
+  double sum_as_double = static_cast<double>(sum_f);
+  double error = residual - (sum_as_double - hi_as_double);
+  float error_f = static_cast<float>(error);
+
+  // Return the normalized pair
+  // If sum_f is different from hi, we need to renormalize
+  if (sum_f != hi) {
+    return {sum_f, error_f};
+  }
+
   return {hi, lo};
 }
 

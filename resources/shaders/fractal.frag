@@ -156,12 +156,16 @@ void main() {
 
     // Mandelbrot (0) and Julia (1) Logic
     if (u_highPrecision) {
+        // For deep zooms, we need to handle UV with more care
+        // Compute pixel offset from center in double-single precision
+        // UV ranges roughly from -0.5 to 0.5, which has good float precision
+        // But we need to ensure no precision is lost in the multiplication
         vec2 uv_x_ds = vec2(uv.x, 0.0);
         vec2 uv_y_ds = vec2(uv.y, 0.0);
 
         vec2 c_x, c_y;
         vec2 z_x, z_y;
-        
+
         // Reconstruct DS numbers from uniforms
         vec2 zoomCenter_x = vec2(u_zoomCenter_x_hi, u_zoomCenter_x_lo);
         vec2 zoomCenter_y = vec2(u_zoomCenter_y_hi, u_zoomCenter_y_lo);
