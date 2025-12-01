@@ -4,7 +4,7 @@
 #include "Constants.h"
 #include "ShaderManager.h"
 #include <QElapsedTimer>
-#include <QOpenGLFunctions>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLTexture>
 #include <QOpenGLWidget>
 #include <QTimer>
@@ -15,7 +15,7 @@
  * Handles the rendering loop, shader uniforms, and palette texture generation.
  * Implements the core rendering logic ported from WebGL.
  */
-class FractalGLWidget : public QOpenGLWidget, protected QOpenGLFunctions {
+class FractalGLWidget : public QOpenGLWidget, protected QOpenGLExtraFunctions {
   Q_OBJECT
 
 public:
