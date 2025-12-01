@@ -66,9 +66,16 @@ private:
   // State (Temporary internal state until AppState is fully integrated)
   // TODO: Move to AppState
   struct {
+    // Current state (smoothly interpolated)
     double zoomCenterX = -0.5;
     double zoomCenterY = 0.0;
     double zoomSize = 3.0;
+
+    // Target state (set by user interactions)
+    double targetZoomCenterX = -0.5;
+    double targetZoomCenterY = 0.0;
+    double targetZoomSize = 3.0;
+
     int maxIterations = 500;
     int paletteId = 0;
     int fractalType = 0; // 0: Mandelbrot

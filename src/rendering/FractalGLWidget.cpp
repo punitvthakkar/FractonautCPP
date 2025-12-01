@@ -183,16 +183,17 @@ void FractalGLWidget::mouseMoveEvent(QMouseEvent *event) {
   if (m_isDragging) {
     QPointF delta = event->pos() - m_lastMousePos;
 
-    // Convert pixel delta to fractal coordinates
-    double pixelToFractal = m_state.zoomSize / height();
-    m_state.zoomCenterX -= delta.x() * pixelToFractal;
-    m_state.zoomCenterY += delta.y() * pixelToFractal; // Y is inverted
+    // Convert pixel delta to fractal coordinates (use height for aspect ratio)
+    double scale = m_state.targetZoomSize / height();
+    m_state.targetZoomCenterX -= delta.x() * scale;
+    m_state.targetZoomCenterY += delta.y() * scale; // Y is inverted
 
-    // Update velocity for momentum
-    m_velocity = delta * 0.5;
+    // Update velocity for momentum (scaled to fractal space)
+    m_velocity.setX(delta.x() * scale * 0.5);
+    m_velocity.setY(delta.y() * scale * 0.5);
 
     m_lastMousePos = event->pos();
-    update();
+    // No need to call update() - animation timer handles continuous rendering
   }
 }
 
@@ -203,54 +204,108 @@ void FractalGLWidget::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void FractalGLWidget::wheelEvent(QWheelEvent *event) {
-  // Logarithmic zoom with focal point
-  double zoomFactor = event->angleDelta().y() > 0 ? 0.9 : 1.1;
+  // Get scroll delta (normalized to +1 or -1)
+  double delta = event->angleDelta().y() > 0 ? -1.0 : 1.0;
 
-  // Get mouse position in fractal coordinates
+  // Base zoom factor (from web version)
+  double baseFactor = 0.15;
+
+  // Progressive slowdown as we zoom in (exponential)
+  // This prevents zoom from "tapping out" too early
+  double zoomFactor = 1.0 + baseFactor * std::pow(m_state.targetZoomSize, 0.3);
+
+  // Get mouse position in normalized coordinates
+  // CRITICAL: Use height for both X and Y to maintain aspect ratio
   QPointF mousePos = event->position();
-  double pixelToFractal = m_state.zoomSize / height();
+  double uvx = (mousePos.x() - width() / 2.0) / height();
+  double uvy = (height() - mousePos.y() - height() / 2.0) / height();
 
-  double mouseFractalX =
-      m_state.zoomCenterX + (mousePos.x() - width() / 2.0) * pixelToFractal;
-  double mouseFractalY =
-      m_state.zoomCenterY - (mousePos.y() - height() / 2.0) * pixelToFractal;
+  // Calculate world position at mouse cursor
+  double wx = m_state.targetZoomCenterX + uvx * m_state.targetZoomSize;
+  double wy = m_state.targetZoomCenterY + uvy * m_state.targetZoomSize;
 
-  // Zoom
-  double oldZoomSize = m_state.zoomSize;
-  m_state.zoomSize *= zoomFactor;
+  // Apply zoom
+  if (delta > 0) {
+    m_state.targetZoomSize *= zoomFactor;
+  } else {
+    m_state.targetZoomSize /= zoomFactor;
+  }
 
-  // Adjust center to keep mouse position fixed
-  double newPixelToFractal = m_state.zoomSize / height();
-  m_state.zoomCenterX =
-      mouseFractalX - (mousePos.x() - width() / 2.0) * newPixelToFractal;
-  m_state.zoomCenterY =
-      mouseFractalY + (mousePos.y() - height() / 2.0) * newPixelToFractal;
+  // Apply smooth zoom limit at 0.5x (zoomSize = 6.0)
+  const double maxZoomSize = 6.0;
+  if (m_state.targetZoomSize > maxZoomSize) {
+    // Smooth resistance with subtle bounce
+    double excess = m_state.targetZoomSize - maxZoomSize;
+    double resistance = 1.0 / (1.0 + excess * 0.5);
+    m_state.targetZoomSize = maxZoomSize + excess * resistance;
 
-  update();
+    // Snap center to starting position when at limit
+    m_state.targetZoomCenterX = -0.5;
+    m_state.targetZoomCenterY = 0.0;
+  } else {
+    // Adjust center to keep mouse position fixed in world space
+    m_state.targetZoomCenterX = wx - uvx * m_state.targetZoomSize;
+    m_state.targetZoomCenterY = wy - uvy * m_state.targetZoomSize;
+  }
+
+  // No need to call update() - animation timer handles continuous rendering
 }
 
-// Animation loop
+// Animation loop (runs at 60 FPS via timer)
 void FractalGLWidget::animate() {
-  double deltaTime = m_frameTimer.elapsed() / 1000.0;
+  qint64 elapsed = m_frameTimer.elapsed();
+  double deltaTime = elapsed / 1000.0;
   m_frameTimer.restart();
 
+  // Cap deltaTime to prevent huge jumps when window is moved/resized
+  if (deltaTime > 0.1) deltaTime = 0.016; // ~60 FPS fallback
+
   updatePhysics(deltaTime);
-  update();
+  update(); // Trigger paintGL
 }
 
 void FractalGLWidget::updatePhysics(double deltaTime) {
-  if (!m_isDragging && m_velocity.manhattanLength() > 0.01) {
-    // Apply momentum
-    double pixelToFractal = m_state.zoomSize / height();
-    m_state.zoomCenterX -= m_velocity.x() * pixelToFractal;
-    m_state.zoomCenterY += m_velocity.y() * pixelToFractal;
+  // Velocity physics - only when not dragging
+  if (!m_isDragging) {
+    // Normalize deltaTime to 60 FPS (as per web version)
+    double dt60 = deltaTime * 60.0;
 
-    // Apply friction (from appconstitution.md: 0.9)
-    m_velocity *= 0.9;
+    // Apply velocity to target position
+    m_state.targetZoomCenterX -= m_velocity.x() * dt60;
+    m_state.targetZoomCenterY -= m_velocity.y() * dt60;
 
-    // Stop if velocity is very small
-    if (std::abs(m_velocity.x()) < 0.01 && std::abs(m_velocity.y()) < 0.01) {
+    // Apply friction with exponential decay (matches web version)
+    const double friction = 0.9;
+    double frictionPow = std::pow(friction, dt60);
+    m_velocity.setX(m_velocity.x() * frictionPow);
+    m_velocity.setY(m_velocity.y() * frictionPow);
+
+    // Early zero-out for better performance (threshold from web version)
+    if (std::abs(m_velocity.x()) < 1e-9 && std::abs(m_velocity.y()) < 1e-9) {
       m_velocity = QPointF(0, 0);
     }
   }
+
+  // CRITICAL: Smooth interpolation (lerp) from current to target state
+  // This is what makes everything feel smooth!
+  const double lerpFactor = 1.0 - std::pow(0.1, deltaTime * 10.0);
+
+  // Apply smooth zoom limit at 0.5x (zoomSize = 6.0)
+  const double maxZoomSize = 6.0;
+  if (m_state.targetZoomSize > maxZoomSize) {
+    double excess = m_state.targetZoomSize - maxZoomSize;
+    double resistance = 1.0 / (1.0 + excess * 0.5);
+    m_state.targetZoomSize = maxZoomSize + excess * resistance;
+    m_state.targetZoomCenterX = -0.5;
+    m_state.targetZoomCenterY = 0.0;
+  }
+
+  // Smooth lerp interpolation (THE KEY TO SMOOTHNESS!)
+  double diffSize = m_state.targetZoomSize - m_state.zoomSize;
+  double diffX = m_state.targetZoomCenterX - m_state.zoomCenterX;
+  double diffY = m_state.targetZoomCenterY - m_state.zoomCenterY;
+
+  m_state.zoomSize += diffSize * lerpFactor;
+  m_state.zoomCenterX += diffX * lerpFactor;
+  m_state.zoomCenterY += diffY * lerpFactor;
 }
