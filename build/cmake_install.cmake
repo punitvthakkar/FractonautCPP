@@ -12,7 +12,7 @@ if(NOT DEFINED CMAKE_INSTALL_CONFIG_NAME)
     string(REGEX REPLACE "^[^A-Za-z0-9_]+" ""
            CMAKE_INSTALL_CONFIG_NAME "${BUILD_TYPE}")
   else()
-    set(CMAKE_INSTALL_CONFIG_NAME "Debug")
+    set(CMAKE_INSTALL_CONFIG_NAME "")
   endif()
   message(STATUS "Install configuration: \"${CMAKE_INSTALL_CONFIG_NAME}\"")
 endif()
@@ -42,7 +42,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/./Fractonaut.app/Contents/MacOS/Fractonaut" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/./Fractonaut.app/Contents/MacOS/Fractonaut")
     execute_process(COMMAND /usr/bin/install_name_tool
-      -delete_rpath "/opt/homebrew/lib"
+      -delete_rpath "/opt/homebrew/opt/qt@6/lib"
       "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/./Fractonaut.app/Contents/MacOS/Fractonaut")
   endif()
 endif()

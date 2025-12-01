@@ -68,10 +68,10 @@ include CMakeFiles/Fractonaut_autogen.dir/progress.make
 
 CMakeFiles/Fractonaut_autogen: Fractonaut_autogen/timestamp
 
-Fractonaut_autogen/timestamp: /opt/homebrew/share/qt/libexec/moc
+Fractonaut_autogen/timestamp: /opt/homebrew/opt/qt@6/share/qt/libexec/moc
 Fractonaut_autogen/timestamp: CMakeFiles/Fractonaut_autogen.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target Fractonaut"
-	/opt/homebrew/bin/cmake -E cmake_autogen /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutogenInfo.json Debug
+	/opt/homebrew/bin/cmake -E cmake_autogen /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutogenInfo.json ""
 	/opt/homebrew/bin/cmake -E touch /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/timestamp
 
 CMakeFiles/Fractonaut_autogen.dir/codegen:

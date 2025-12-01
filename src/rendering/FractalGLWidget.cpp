@@ -1,5 +1,8 @@
 #include "FractalGLWidget.h"
+#include <QApplication>
+#include <QClipboard>
 #include <QDebug>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <cmath>
@@ -7,6 +10,10 @@
 FractalGLWidget::FractalGLWidget(QWidget *parent)
     : QOpenGLWidget(parent), m_vao(0), m_vbo(0), m_isDragging(false),
       m_velocity(0, 0) {
+
+  // Initialize state
+  m_state = State();
+  m_targetState = m_state;
 
   // Enable mouse tracking for smooth interaction
   setMouseTracking(true);
@@ -58,7 +65,12 @@ void FractalGLWidget::initializeGL() {
   createPaletteTexture();
 }
 
-void FractalGLWidget::resizeGL(int w, int h) { glViewport(0, 0, w, h); }
+void FractalGLWidget::resizeGL(int w, int h) {
+  // w and h are already multiplied by devicePixelRatio in QOpenGLWidget if set
+  // up correctly But we should rely on devicePixelRatio() for uniforms to be
+  // safe
+  glViewport(0, 0, w, h);
+}
 
 void FractalGLWidget::paintGL() {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -86,17 +98,22 @@ void FractalGLWidget::paintGL() {
 void FractalGLWidget::updateUniforms() {
   QOpenGLShaderProgram *program = m_shaderManager.getProgram();
 
-  // Resolution
-  program->setUniformValue("u_resolution", QVector2D(width(), height()));
+  // Handle High-DPI: Use physical pixels for resolution
+  float dpr = devicePixelRatio();
+  program->setUniformValue("u_resolution",
+                           QVector2D(width() * dpr, height() * dpr));
 
   // Zoom Center (Double Precision Emulation)
   DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
   DoubleSplit centerY = splitDouble(m_state.zoomCenterY);
   DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
 
-  program->setUniformValue("u_zoomCenter_x", QVector2D(centerX.hi, centerX.lo));
-  program->setUniformValue("u_zoomCenter_y", QVector2D(centerY.hi, centerY.lo));
-  program->setUniformValue("u_zoomSize", QVector2D(zoomSize.hi, zoomSize.lo));
+  program->setUniformValue("u_zoomCenter_x_hi", centerX.hi);
+  program->setUniformValue("u_zoomCenter_x_lo", centerX.lo);
+  program->setUniformValue("u_zoomCenter_y_hi", centerY.hi);
+  program->setUniformValue("u_zoomCenter_y_lo", centerY.lo);
+  program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
+  program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
 
   // Other uniforms
   program->setUniformValue("u_maxIterations", m_state.maxIterations);
@@ -105,13 +122,42 @@ void FractalGLWidget::updateUniforms() {
   program->setUniformValue("u_juliaC",
                            QVector2D(m_state.juliaCx, m_state.juliaCy));
 
-  // High precision flag
-  bool highPrecision = m_state.zoomSize < 0.001 && m_state.fractalType < 2;
+  // High precision flag - Enable much earlier to avoid pixelation
+  // Also ensure it's on for deep zooms
+  // DEBUG: Force true to verify if logic is the issue
+  bool highPrecision =
+      true; // m_state.zoomSize < 0.1 && m_state.fractalType < 2;
   program->setUniformValue("u_highPrecision", highPrecision);
+
+  // DEBUG: Print split values for the coordinates causing issues
+  static int debugCounter = 0;
+  if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
+    // Test coordinate from user report
+    double testVal = -0.9197790506151321;
+    DoubleSplit split = splitDouble(testVal);
+    qDebug() << "--- Split Logic Verification ---";
+    qDebug() << "Input:" << QString::number(testVal, 'g', 17);
+    qDebug() << "Hi:" << QString::number(split.hi, 'g', 9);
+    qDebug() << "Lo:" << QString::number(split.lo, 'g', 9);
+    qDebug() << "Reconstructed:"
+             << QString::number((double)split.hi + (double)split.lo, 'g', 17);
+    qDebug() << "Error:"
+             << QString::number(testVal - ((double)split.hi + (double)split.lo),
+                                'g', 17);
+  }
+
+  // DEBUG: Print split values for the coordinates causing issues
+  // static int debugCounter = 0; // This was moved above
+  if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
+    qDebug() << "Center X:" << m_state.zoomCenterX;
+    qDebug() << "Split X:" << centerX.hi << centerX.lo;
+    qDebug() << "High Precision:" << highPrecision;
+  }
 }
 
 FractalGLWidget::DoubleSplit FractalGLWidget::splitDouble(double value) {
   // Emulate splitDouble from JS/GLSL
+  // Simple cast method is most robust for passing double as two floats
   float hi = static_cast<float>(value);
   float lo = static_cast<float>(value - static_cast<double>(hi));
   return {hi, lo};
@@ -174,24 +220,38 @@ void FractalGLWidget::createPaletteTexture() {
 void FractalGLWidget::mousePressEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton) {
     m_isDragging = true;
-    m_lastMousePos = event->pos();
+    m_lastMousePos = event->position(); // Use floating point position
     m_velocity = QPointF(0, 0);
+
+    // Sync target to current when starting drag to avoid jumps
+    m_targetState.zoomCenterX = m_state.zoomCenterX;
+    m_targetState.zoomCenterY = m_state.zoomCenterY;
   }
 }
 
 void FractalGLWidget::mouseMoveEvent(QMouseEvent *event) {
   if (m_isDragging) {
-    QPointF delta = event->pos() - m_lastMousePos;
+    QPointF currentPos = event->position();
+    QPointF delta = currentPos - m_lastMousePos;
 
     // Convert pixel delta to fractal coordinates
+    // Use logical height since event coordinates are logical
     double pixelToFractal = m_state.zoomSize / height();
+
+    // Direct manipulation for immediate response during drag
     m_state.zoomCenterX -= delta.x() * pixelToFractal;
-    m_state.zoomCenterY += delta.y() * pixelToFractal; // Y is inverted
+    m_state.zoomCenterY +=
+        delta.y() * pixelToFractal; // Y is inverted in fractal space
 
-    // Update velocity for momentum
-    m_velocity = delta * 0.5;
+    // Update target too so it doesn't drift back
+    m_targetState.zoomCenterX = m_state.zoomCenterX;
+    m_targetState.zoomCenterY = m_state.zoomCenterY;
 
-    m_lastMousePos = event->pos();
+    // Update velocity for momentum - smoother calculation
+    // Use a simple low-pass filter or just the raw delta
+    m_velocity = delta;
+
+    m_lastMousePos = currentPos;
     update();
   }
 }
@@ -202,54 +262,99 @@ void FractalGLWidget::mouseReleaseEvent(QMouseEvent *event) {
   }
 }
 
+#include <QApplication>
+#include <QClipboard>
+
 void FractalGLWidget::wheelEvent(QWheelEvent *event) {
-  // Logarithmic zoom with focal point
-  double zoomFactor = event->angleDelta().y() > 0 ? 0.9 : 1.1;
+  // Smoother, slower zoom factor for "satisfying" feel
+  // Was 0.8/1.25, making it closer to 1.0 slows it down
+  double zoomFactor = event->angleDelta().y() > 0 ? 0.92 : 1.08;
 
-  // Get mouse position in fractal coordinates
+  // Get mouse position
   QPointF mousePos = event->position();
-  double pixelToFractal = m_state.zoomSize / height();
 
-  double mouseFractalX =
-      m_state.zoomCenterX + (mousePos.x() - width() / 2.0) * pixelToFractal;
-  double mouseFractalY =
-      m_state.zoomCenterY - (mousePos.y() - height() / 2.0) * pixelToFractal;
+  // Calculate mouse position in fractal space relative to CURRENT center
+  double relX = mousePos.x() - width() / 2.0;
+  double relY = mousePos.y() - height() / 2.0;
+  double pixelToFractal = m_targetState.zoomSize / height();
 
-  // Zoom
-  double oldZoomSize = m_state.zoomSize;
-  m_state.zoomSize *= zoomFactor;
+  double mouseFractalX = m_targetState.zoomCenterX + relX * pixelToFractal;
+  double mouseFractalY = m_targetState.zoomCenterY - relY * pixelToFractal;
 
-  // Adjust center to keep mouse position fixed
-  double newPixelToFractal = m_state.zoomSize / height();
-  m_state.zoomCenterX =
-      mouseFractalX - (mousePos.x() - width() / 2.0) * newPixelToFractal;
-  m_state.zoomCenterY =
-      mouseFractalY + (mousePos.y() - height() / 2.0) * newPixelToFractal;
+  // Update TARGET zoom size
+  m_targetState.zoomSize *= zoomFactor;
 
-  update();
+  // Calculate new target center to keep mouse position fixed
+  double newPixelToFractal = m_targetState.zoomSize / height();
+  m_targetState.zoomCenterX = mouseFractalX - relX * newPixelToFractal;
+  m_targetState.zoomCenterY = mouseFractalY + relY * newPixelToFractal;
+
+  // Don't call update() here, let animate() handle the interpolation
+}
+
+void FractalGLWidget::keyPressEvent(QKeyEvent *event) {
+  if (event->key() == Qt::Key_P) {
+    qDebug() << "--- Debug Coordinates ---";
+    qDebug() << "X:" << QString::number(m_state.zoomCenterX, 'g', 16);
+    qDebug() << "Y:" << QString::number(m_state.zoomCenterY, 'g', 16);
+    qDebug() << "Zoom:" << QString::number(m_state.zoomSize, 'g', 16);
+    qDebug() << "High Precision:" << (m_state.zoomSize < 0.1);
+    qDebug() << "-------------------------";
+  }
+  if (event->key() == Qt::Key_C) {
+    QString coords = QString("X: %1\nY: %2\nZoom: %3")
+                         .arg(QString::number(m_state.zoomCenterX, 'g', 16))
+                         .arg(QString::number(m_state.zoomCenterY, 'g', 16))
+                         .arg(QString::number(m_state.zoomSize, 'g', 16));
+
+    QApplication::clipboard()->setText(coords);
+    qDebug() << "Coordinates copied to clipboard!";
+  }
+  QOpenGLWidget::keyPressEvent(event);
 }
 
 // Animation loop
 void FractalGLWidget::animate() {
-  double deltaTime = m_frameTimer.elapsed() / 1000.0;
-  m_frameTimer.restart();
+  // Use fixed time step for physics to avoid instability
+  updatePhysics(0.016); // ~60 FPS
 
-  updatePhysics(deltaTime);
+  // Always update for smooth zoom interpolation
   update();
 }
 
 void FractalGLWidget::updatePhysics(double deltaTime) {
-  if (!m_isDragging && m_velocity.manhattanLength() > 0.01) {
-    // Apply momentum
-    double pixelToFractal = m_state.zoomSize / height();
-    m_state.zoomCenterX -= m_velocity.x() * pixelToFractal;
-    m_state.zoomCenterY += m_velocity.y() * pixelToFractal;
+  // 1. Smooth Zoom Interpolation
+  // Interpolate zoom size (logarithmic interpolation would be better, but
+  // linear on value is okay for small steps) Using exponential smoothing:
+  // current += (target - current) * factor
+  double smoothFactor = 0.08; // Slightly smoother than 0.1
 
-    // Apply friction (from appconstitution.md: 0.9)
-    m_velocity *= 0.9;
+  m_state.zoomSize +=
+      (m_targetState.zoomSize - m_state.zoomSize) * smoothFactor;
+  m_state.zoomCenterX +=
+      (m_targetState.zoomCenterX - m_state.zoomCenterX) * smoothFactor;
+  m_state.zoomCenterY +=
+      (m_targetState.zoomCenterY - m_state.zoomCenterY) * smoothFactor;
+
+  // 2. Momentum Panning
+  if (!m_isDragging && m_velocity.manhattanLength() > 0.1) {
+    double pixelToFractal = m_state.zoomSize / height();
+
+    // Apply velocity to BOTH current and target to maintain momentum
+    double dx = m_velocity.x() * pixelToFractal;
+    double dy = m_velocity.y() * pixelToFractal;
+
+    m_state.zoomCenterX -= dx;
+    m_state.zoomCenterY += dy;
+    m_targetState.zoomCenterX -= dx;
+    m_targetState.zoomCenterY += dy;
+
+    // Apply friction - tune this for "sacred smoothness"
+    // 0.95 is smoother/longer slide than 0.9
+    m_velocity *= 0.92;
 
     // Stop if velocity is very small
-    if (std::abs(m_velocity.x()) < 0.01 && std::abs(m_velocity.y()) < 0.01) {
+    if (m_velocity.manhattanLength() < 0.1) {
       m_velocity = QPointF(0, 0);
     }
   }

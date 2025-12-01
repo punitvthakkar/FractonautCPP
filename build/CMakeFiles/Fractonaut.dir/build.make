@@ -69,20 +69,20 @@ include CMakeFiles/Fractonaut.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/Fractonaut.dir/flags.make
 
-Fractonaut_autogen/timestamp: /opt/homebrew/share/qt/libexec/moc
+Fractonaut_autogen/timestamp: /opt/homebrew/opt/qt@6/share/qt/libexec/moc
 Fractonaut_autogen/timestamp: CMakeFiles/Fractonaut.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target Fractonaut"
-	/opt/homebrew/bin/cmake -E cmake_autogen /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutogenInfo.json Debug
+	/opt/homebrew/bin/cmake -E cmake_autogen /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutogenInfo.json ""
 	/opt/homebrew/bin/cmake -E touch /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/timestamp
 
 Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/resources/resources.qrc
 Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: CMakeFiles/Fractonaut_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Info.json
 Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/resources/shaders/fractal.vert
 Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/resources/shaders/fractal.frag
-Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /opt/homebrew/share/qt/libexec/rcc
-Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /opt/homebrew/share/qt/libexec/rcc
+Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /opt/homebrew/opt/qt@6/share/qt/libexec/rcc
+Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp: /opt/homebrew/opt/qt@6/share/qt/libexec/rcc
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Automatic RCC for resources/resources.qrc"
-	/opt/homebrew/bin/cmake -E cmake_autorcc /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Info.json Debug
+	/opt/homebrew/bin/cmake -E cmake_autorcc /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Info.json 
 
 CMakeFiles/Fractonaut.dir/codegen:
 .PHONY : CMakeFiles/Fractonaut.dir/codegen
@@ -174,11 +174,11 @@ Fractonaut.app/Contents/MacOS/Fractonaut: CMakeFiles/Fractonaut.dir/src/renderin
 Fractonaut.app/Contents/MacOS/Fractonaut: CMakeFiles/Fractonaut.dir/src/rendering/ShaderManager.cpp.o
 Fractonaut.app/Contents/MacOS/Fractonaut: CMakeFiles/Fractonaut.dir/Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp.o
 Fractonaut.app/Contents/MacOS/Fractonaut: CMakeFiles/Fractonaut.dir/build.make
-Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/lib/QtOpenGLWidgets.framework/Versions/A/QtOpenGLWidgets
-Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/lib/QtWidgets.framework/Versions/A/QtWidgets
-Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/lib/QtOpenGL.framework/Versions/A/QtOpenGL
-Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/lib/QtGui.framework/Versions/A/QtGui
-Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/lib/QtCore.framework/Versions/A/QtCore
+Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/opt/qt@6/lib/QtOpenGLWidgets.framework/Versions/A/QtOpenGLWidgets
+Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/opt/qt@6/lib/QtWidgets.framework/Versions/A/QtWidgets
+Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/opt/qt@6/lib/QtOpenGL.framework/Versions/A/QtOpenGL
+Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/opt/qt@6/lib/QtGui.framework/Versions/A/QtGui
+Fractonaut.app/Contents/MacOS/Fractonaut: /opt/homebrew/opt/qt@6/lib/QtCore.framework/Versions/A/QtCore
 Fractonaut.app/Contents/MacOS/Fractonaut: CMakeFiles/Fractonaut.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable Fractonaut.app/Contents/MacOS/Fractonaut"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/Fractonaut.dir/link.txt --verbose=$(VERBOSE)

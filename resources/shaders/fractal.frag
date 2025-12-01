@@ -2,9 +2,13 @@
 
 uniform vec2 u_resolution;
 // Double precision emulation: .x = high, .y = low
-uniform vec2 u_zoomCenter_x; 
-uniform vec2 u_zoomCenter_y;
-uniform vec2 u_zoomSize;
+// Double precision emulation: .x = high, .y = low
+uniform float u_zoomCenter_x_hi;
+uniform float u_zoomCenter_x_lo;
+uniform float u_zoomCenter_y_hi;
+uniform float u_zoomCenter_y_lo;
+uniform float u_zoomSize_hi;
+uniform float u_zoomSize_lo;
 uniform int u_maxIterations;
 uniform int u_paletteId;
 uniform bool u_highPrecision;
@@ -112,7 +116,7 @@ void main() {
     
     // Sierpinski Triangle (Type 2)
     if (u_fractalType == 2) {
-        vec2 z = vec2(u_zoomCenter_x.x, u_zoomCenter_y.x) + uv * u_zoomSize.x;
+        vec2 z = vec2(u_zoomCenter_x_hi, u_zoomCenter_y_hi) + uv * u_zoomSize_hi;
         
         // Center correction
         z.y -= 0.25; 
@@ -157,17 +161,22 @@ void main() {
 
         vec2 c_x, c_y;
         vec2 z_x, z_y;
+        
+        // Reconstruct DS numbers from uniforms
+        vec2 zoomCenter_x = vec2(u_zoomCenter_x_hi, u_zoomCenter_x_lo);
+        vec2 zoomCenter_y = vec2(u_zoomCenter_y_hi, u_zoomCenter_y_lo);
+        vec2 zoomSize = vec2(u_zoomSize_hi, u_zoomSize_lo);
 
         if (u_fractalType == 1) {
             // Julia: c is constant, z is pixel
             c_x = vec2(u_juliaC.x, 0.0);
             c_y = vec2(u_juliaC.y, 0.0);
-            z_x = ds_add(u_zoomCenter_x, ds_mul(uv_x_ds, u_zoomSize));
-            z_y = ds_add(u_zoomCenter_y, ds_mul(uv_y_ds, u_zoomSize));
+            z_x = ds_add(zoomCenter_x, ds_mul(uv_x_ds, zoomSize));
+            z_y = ds_add(zoomCenter_y, ds_mul(uv_y_ds, zoomSize));
         } else {
             // Mandelbrot: z starts at 0, c is pixel
-            c_x = ds_add(u_zoomCenter_x, ds_mul(uv_x_ds, u_zoomSize));
-            c_y = ds_add(u_zoomCenter_y, ds_mul(uv_y_ds, u_zoomSize));
+            c_x = ds_add(zoomCenter_x, ds_mul(uv_x_ds, zoomSize));
+            c_y = ds_add(zoomCenter_y, ds_mul(uv_y_ds, zoomSize));
             z_x = vec2(0.0);
             z_y = vec2(0.0);
         }
@@ -201,10 +210,10 @@ void main() {
         if (u_fractalType == 1) {
             // Julia
             c = u_juliaC;
-            z = vec2(u_zoomCenter_x.x, u_zoomCenter_y.x) + uv * u_zoomSize.x;
+            z = vec2(u_zoomCenter_x_hi, u_zoomCenter_y_hi) + uv * u_zoomSize_hi;
         } else {
             // Mandelbrot
-            c = vec2(u_zoomCenter_x.x, u_zoomCenter_y.x) + uv * u_zoomSize.x;
+            c = vec2(u_zoomCenter_x_hi, u_zoomCenter_y_hi) + uv * u_zoomSize_hi;
             z = vec2(0.0);
             
             // Cardioid check optimization (Mandelbrot only)

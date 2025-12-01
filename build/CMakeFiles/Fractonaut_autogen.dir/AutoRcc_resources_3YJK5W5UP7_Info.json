@@ -17,7 +17,7 @@
 	"OPTIONS" : [ "-name", "resources" ],
 	"OUTPUT_CHECKSUM" : "3YJK5W5UP7",
 	"OUTPUT_NAME" : "qrc_resources.cpp",
-	"RCC_EXECUTABLE" : "/opt/homebrew/share/qt/libexec/rcc",
+	"RCC_EXECUTABLE" : "/opt/homebrew/opt/qt@6/share/qt/libexec/rcc",
 	"RCC_LIST_OPTIONS" : [ "--list" ],
 	"SETTINGS_FILE" : "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/CMakeFiles/Fractonaut_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Used.txt",
 	"SOURCE" : "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/resources/resources.qrc",

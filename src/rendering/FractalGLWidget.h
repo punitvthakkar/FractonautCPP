@@ -32,6 +32,7 @@ protected:
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
+  void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
   void animate();
@@ -63,9 +64,8 @@ private:
   QPointF m_lastMousePos;
   QPointF m_velocity;
 
-  // State (Temporary internal state until AppState is fully integrated)
-  // TODO: Move to AppState
-  struct {
+  // State
+  struct State {
     double zoomCenterX = -0.5;
     double zoomCenterY = 0.0;
     double zoomSize = 3.0;
@@ -74,7 +74,10 @@ private:
     int fractalType = 0; // 0: Mandelbrot
     double juliaCx = -0.7269;
     double juliaCy = 0.1889;
-  } m_state;
+  };
+
+  State m_state;       // Current state (rendered)
+  State m_targetState; // Target state (for smooth interpolation)
 };
 
 #endif // FRACTALGLWIDGET_H
