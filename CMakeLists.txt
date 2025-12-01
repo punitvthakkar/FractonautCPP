@@ -26,10 +26,16 @@ find_package(Qt6 COMPONENTS
     REQUIRED
 )
 
-# macOS specific settings
-if(APPLE)
+# Platform specific settings
+if(APPLE AND NOT ANDROID)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")  # macOS Big Sur minimum
     message(STATUS "Building for macOS with deployment target ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif()
+
+if(ANDROID)
+    message(STATUS "Building for Android")
+    set(ANDROID_MIN_SDK_VERSION 26)
+    set(ANDROID_TARGET_SDK_VERSION 34)
 endif()
 
 # Include directories
@@ -54,11 +60,19 @@ set(RESOURCES
 )
 
 # Create executable
-add_executable(Fractonaut MACOSX_BUNDLE
-    ${SOURCES}
-    ${HEADERS}
-    ${RESOURCES}
-)
+if(ANDROID)
+    add_library(Fractonaut SHARED
+        ${SOURCES}
+        ${HEADERS}
+        ${RESOURCES}
+    )
+else()
+    add_executable(Fractonaut MACOSX_BUNDLE
+        ${SOURCES}
+        ${HEADERS}
+        ${RESOURCES}
+    )
+endif()
 
 # Link Qt libraries
 target_link_libraries(Fractonaut PRIVATE
@@ -70,13 +84,22 @@ target_link_libraries(Fractonaut PRIVATE
 )
 
 # macOS bundle configuration
-if(APPLE)
+if(APPLE AND NOT ANDROID)
     set_target_properties(Fractonaut PROPERTIES
         MACOSX_BUNDLE_BUNDLE_NAME "Fractonaut"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.fractonaut.app"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_INFO_STRING "Infinite fractal explorer"
+    )
+endif()
+
+# Android configuration
+if(ANDROID)
+    set_target_properties(Fractonaut PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/android"
+        QT_ANDROID_MIN_SDK_VERSION ${ANDROID_MIN_SDK_VERSION}
+        QT_ANDROID_TARGET_SDK_VERSION ${ANDROID_TARGET_SDK_VERSION}
     )
 endif()
 

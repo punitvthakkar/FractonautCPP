@@ -1,0 +1,95 @@
+QUICK START: Building Fractonaut for Android
+=============================================
+
+STEP 1: Install Prerequisites
+------------------------------
+# Install Java JDK 17
+brew install openjdk@17
+
+# Install Android command-line tools
+mkdir -p ~/Library/Android/sdk
+cd ~/Library/Android/sdk
+# Download from: https://developer.android.com/studio#command-line-tools-only
+# Or use: curl -O https://dl.google.com/android/repository/commandlinetools-mac-11076708_latest.zip
+unzip commandlinetools-mac-*.zip
+mkdir -p cmdline-tools/latest
+mv cmdline-tools/* cmdline-tools/latest/
+
+# Install SDK components
+export ANDROID_HOME=$HOME/Library/Android/sdk
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125"
+
+# Install Qt for Android
+# Download Qt Online Installer from: https://www.qt.io/download
+# During installation, select:
+#   - Qt 6.x for Android (arm64-v8a)
+#   - CMake
+#   - Ninja
+
+STEP 2: Set Environment Variables
+----------------------------------
+Add to ~/.zshrc:
+
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export QT_ANDROID_PATH=$HOME/Qt/6.7.2/android_arm64_v8a  # Adjust version!
+export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
+Then run: source ~/.zshrc
+
+STEP 3: Build APK
+-----------------
+cd /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP
+
+# Edit build script to set your Qt version
+nano build_android.sh
+# Update line: QT_VERSION="6.7.2"  # Change to YOUR version
+
+# Run build
+./build_android.sh
+
+# Result: Fractonaut.apk will be created in the project folder
+
+STEP 4: Install on Android Phone
+---------------------------------
+METHOD A - Via USB (Recommended):
+1. Enable Developer Options on phone:
+   Settings → About Phone → Tap "Build Number" 7 times
+2. Enable USB Debugging:
+   Settings → Developer Options → USB Debugging → ON
+3. Connect phone to Mac via USB
+4. Run: adb install Fractonaut.apk
+
+METHOD B - Manual Transfer:
+1. Copy Fractonaut.apk to your phone (via AirDrop, email, etc.)
+2. On phone, tap the APK file
+3. Allow "Install from Unknown Sources" if prompted
+4. Tap Install
+
+TROUBLESHOOTING
+---------------
+Error: "Qt for Android not found"
+Fix: Install Qt for Android or update QT_ANDROID_PATH in build_android.sh
+
+Error: "Android SDK not found"
+Fix: Set ANDROID_HOME environment variable
+
+Error: "adb: command not found"
+Fix: Add $ANDROID_HOME/platform-tools to PATH
+
+Error: "Gradle build failed"
+Fix: Ensure Java 17 is installed and JAVA_HOME is set
+
+TESTING
+-------
+# View app logs while running
+adb logcat | grep Fractonaut
+
+# Check if device is connected
+adb devices
+
+# Uninstall old version
+adb uninstall com.fractonaut.app
+
+For full documentation, see: BUILD_ANDROID.md
