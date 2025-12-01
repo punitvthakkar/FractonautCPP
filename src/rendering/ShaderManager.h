@@ -28,8 +28,15 @@ public:
    */
   QOpenGLShaderProgram *getProgram() const;
 
+  /**
+   * @brief Check if using native double precision
+   * @return true if GPU supports and is using native doubles
+   */
+  bool isUsingNativeDoubles() const { return m_usingNativeDoubles; }
+
 private:
   std::unique_ptr<QOpenGLShaderProgram> m_program;
+  bool m_usingNativeDoubles = false;
 };
 
 #endif // SHADERMANAGER_H

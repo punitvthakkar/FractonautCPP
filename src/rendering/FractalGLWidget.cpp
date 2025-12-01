@@ -103,17 +103,34 @@ void FractalGLWidget::updateUniforms() {
   program->setUniformValue("u_resolution",
                            QVector2D(width() * dpr, height() * dpr));
 
-  // Zoom Center (Double Precision Emulation)
-  DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
-  DoubleSplit centerY = splitDouble(m_state.zoomCenterY);
-  DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+  // Check if we're using native double precision or float-float emulation
+  if (m_shaderManager.isUsingNativeDoubles()) {
+    // Native double precision - pass doubles directly!
+    GLint loc;
+    loc = program->uniformLocation("u_zoomCenter_x");
+    if (loc != -1)
+      program->setUniformValue(loc, m_state.zoomCenterX);
 
-  program->setUniformValue("u_zoomCenter_x_hi", centerX.hi);
-  program->setUniformValue("u_zoomCenter_x_lo", centerX.lo);
-  program->setUniformValue("u_zoomCenter_y_hi", centerY.hi);
-  program->setUniformValue("u_zoomCenter_y_lo", centerY.lo);
-  program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
-  program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
+    loc = program->uniformLocation("u_zoomCenter_y");
+    if (loc != -1)
+      program->setUniformValue(loc, m_state.zoomCenterY);
+
+    loc = program->uniformLocation("u_zoomSize");
+    if (loc != -1)
+      program->setUniformValue(loc, m_state.zoomSize);
+  } else {
+    // Float-float emulation - split doubles into hi/lo pairs
+    DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
+    DoubleSplit centerY = splitDouble(m_state.zoomCenterY);
+    DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+
+    program->setUniformValue("u_zoomCenter_x_hi", centerX.hi);
+    program->setUniformValue("u_zoomCenter_x_lo", centerX.lo);
+    program->setUniformValue("u_zoomCenter_y_hi", centerY.hi);
+    program->setUniformValue("u_zoomCenter_y_lo", centerY.lo);
+    program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
+    program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
+  }
 
   // Other uniforms - Scale iterations based on zoom for better detail at deep zooms
   int effectiveIterations = m_state.maxIterations;
@@ -131,32 +148,44 @@ void FractalGLWidget::updateUniforms() {
   program->setUniformValue("u_juliaC",
                            QVector2D(m_state.juliaCx, m_state.juliaCy));
 
-  // High precision flag - Enable much earlier to avoid pixelation
-  // Also ensure it's on for deep zooms
-  // DEBUG: Force true to verify if logic is the issue
-  bool highPrecision =
-      true; // m_state.zoomSize < 0.1 && m_state.fractalType < 2;
-  program->setUniformValue("u_highPrecision", highPrecision);
+  // High precision flag - only needed for float-float emulation
+  if (!m_shaderManager.isUsingNativeDoubles()) {
+    bool highPrecision = true; // Always use high precision with float-float
+    program->setUniformValue("u_highPrecision", highPrecision);
+  }
 
-  // DEBUG: Print split values for verification
+  // DEBUG: Print precision info
   static int debugCounter = 0;
   if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
     qDebug() << "=== PRECISION DEBUG ===";
+    qDebug() << "Mode:"
+             << (m_shaderManager.isUsingNativeDoubles()
+                     ? "NATIVE DOUBLE (64-bit)"
+                     : "Float-Float Emulation");
     qDebug() << "Center X:" << QString::number(m_state.zoomCenterX, 'g', 17);
-    qDebug() << "  Split Hi:" << QString::number(centerX.hi, 'g', 9);
-    qDebug() << "  Split Lo:" << QString::number(centerX.lo, 'g', 9);
-    qDebug() << "  Reconstructed:"
-             << QString::number((double)centerX.hi + (double)centerX.lo, 'g',
-                                17);
-    qDebug() << "  Error:"
-             << QString::number(
-                    m_state.zoomCenterX -
-                        ((double)centerX.hi + (double)centerX.lo),
-                    'g', 9);
+    qDebug() << "Center Y:" << QString::number(m_state.zoomCenterY, 'g', 17);
     qDebug() << "Zoom Size:" << QString::number(m_state.zoomSize, 'g', 9);
-    qDebug() << "  Split Hi:" << QString::number(zoomSize.hi, 'g', 9);
-    qDebug() << "  Split Lo:" << QString::number(zoomSize.lo, 'g', 9);
-    qDebug() << "High Precision:" << highPrecision;
+
+    if (!m_shaderManager.isUsingNativeDoubles()) {
+      DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
+      DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+      qDebug() << "  Split X Hi:" << QString::number(centerX.hi, 'g', 9);
+      qDebug() << "  Split X Lo:" << QString::number(centerX.lo, 'g', 9);
+      qDebug() << "  Reconstructed:"
+               << QString::number((double)centerX.hi + (double)centerX.lo, 'g',
+                                  17);
+      qDebug() << "  Split Error:"
+               << QString::number(
+                      m_state.zoomCenterX -
+                          ((double)centerX.hi + (double)centerX.lo),
+                      'g', 9);
+    }
+
+    // Calculate expected pixel precision at this zoom
+    double pixelSize = m_state.zoomSize / height();
+    qDebug() << "Pixel Size (fractal units):"
+             << QString::number(pixelSize, 'e', 2);
+    qDebug() << "Effective Iterations:" << effectiveIterations;
     qDebug() << "======================";
   }
 }
