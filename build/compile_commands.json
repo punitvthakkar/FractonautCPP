@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/include -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/include -isystem /opt/homebrew/lib/QtCore.framework/Headers -iframework /opt/homebrew/lib -isystem /opt/homebrew/share/qt/mkspecs/macx-clang -isystem /opt/homebrew/include -isystem /opt/homebrew/lib/QtGui.framework/Headers -isystem /opt/homebrew/lib/QtWidgets.framework/Headers -isystem /opt/homebrew/lib/QtOpenGL.framework/Headers -isystem /opt/homebrew/lib/QtOpenGLWidgets.framework/Headers -g -std=c++17 -arch arm64 -mmacosx-version-min=11.0 -o CMakeFiles/Fractonaut.dir/Fractonaut_autogen/mocs_compilation.cpp.o -c /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/mocs_compilation.cpp",
+  "file": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/mocs_compilation.cpp",
+  "output": "CMakeFiles/Fractonaut.dir/Fractonaut_autogen/mocs_compilation.cpp.o"
+},
+{
+  "directory": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/include -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/include -isystem /opt/homebrew/lib/QtCore.framework/Headers -iframework /opt/homebrew/lib -isystem /opt/homebrew/share/qt/mkspecs/macx-clang -isystem /opt/homebrew/include -isystem /opt/homebrew/lib/QtGui.framework/Headers -isystem /opt/homebrew/lib/QtWidgets.framework/Headers -isystem /opt/homebrew/lib/QtOpenGL.framework/Headers -isystem /opt/homebrew/lib/QtOpenGLWidgets.framework/Headers -g -std=c++17 -arch arm64 -mmacosx-version-min=11.0 -o CMakeFiles/Fractonaut.dir/src/main.cpp.o -c /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/main.cpp",
+  "file": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/main.cpp",
+  "output": "CMakeFiles/Fractonaut.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/include -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/include -isystem /opt/homebrew/lib/QtCore.framework/Headers -iframework /opt/homebrew/lib -isystem /opt/homebrew/share/qt/mkspecs/macx-clang -isystem /opt/homebrew/include -isystem /opt/homebrew/lib/QtGui.framework/Headers -isystem /opt/homebrew/lib/QtWidgets.framework/Headers -isystem /opt/homebrew/lib/QtOpenGL.framework/Headers -isystem /opt/homebrew/lib/QtOpenGLWidgets.framework/Headers -g -std=c++17 -arch arm64 -mmacosx-version-min=11.0 -o CMakeFiles/Fractonaut.dir/src/rendering/FractalGLWidget.cpp.o -c /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/rendering/FractalGLWidget.cpp",
+  "file": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/rendering/FractalGLWidget.cpp",
+  "output": "CMakeFiles/Fractonaut.dir/src/rendering/FractalGLWidget.cpp.o"
+},
+{
+  "directory": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/include -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/include -isystem /opt/homebrew/lib/QtCore.framework/Headers -iframework /opt/homebrew/lib -isystem /opt/homebrew/share/qt/mkspecs/macx-clang -isystem /opt/homebrew/include -isystem /opt/homebrew/lib/QtGui.framework/Headers -isystem /opt/homebrew/lib/QtWidgets.framework/Headers -isystem /opt/homebrew/lib/QtOpenGL.framework/Headers -isystem /opt/homebrew/lib/QtOpenGLWidgets.framework/Headers -g -std=c++17 -arch arm64 -mmacosx-version-min=11.0 -o CMakeFiles/Fractonaut.dir/src/rendering/ShaderManager.cpp.o -c /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/rendering/ShaderManager.cpp",
+  "file": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/src/rendering/ShaderManager.cpp",
+  "output": "CMakeFiles/Fractonaut.dir/src/rendering/ShaderManager.cpp.o"
+},
+{
+  "directory": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/include -I/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/include -isystem /opt/homebrew/lib/QtCore.framework/Headers -iframework /opt/homebrew/lib -isystem /opt/homebrew/share/qt/mkspecs/macx-clang -isystem /opt/homebrew/include -isystem /opt/homebrew/lib/QtGui.framework/Headers -isystem /opt/homebrew/lib/QtWidgets.framework/Headers -isystem /opt/homebrew/lib/QtOpenGL.framework/Headers -isystem /opt/homebrew/lib/QtOpenGLWidgets.framework/Headers -g -std=c++17 -arch arm64 -mmacosx-version-min=11.0 -o CMakeFiles/Fractonaut.dir/Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp.o -c /Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp",
+  "file": "/Users/punitthakkar/Documents/Personal/Code/2025/FractonautCPP/build/Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp",
+  "output": "CMakeFiles/Fractonaut.dir/Fractonaut_autogen/3YJK5W5UP7/qrc_resources.cpp.o"
+}
+]

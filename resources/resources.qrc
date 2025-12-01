@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/shaders">
+        <file>shaders/fractal.vert</file>
+        <file>shaders/fractal.frag</file>
+    </qresource>
+</RCC>
+
