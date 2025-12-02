@@ -11,6 +11,9 @@ ShaderManager::~ShaderManager() {
 }
 
 bool ShaderManager::loadFractalShader() {
+  // OpenGL ES (Android/iOS) doesn't support native double precision
+  // Only desktop OpenGL has glUniform1d and GL_ARB_gpu_shader_fp64
+#ifndef __ANDROID__
   // Try native double precision first (requires GL_ARB_gpu_shader_fp64)
   qInfo() << "Attempting to load native double precision shader...";
 
@@ -38,6 +41,10 @@ bool ShaderManager::loadFractalShader() {
   qWarning() << "Native double precision not supported, falling back to "
                 "float-float emulation";
   qWarning() << "Double shader error:" << m_program->log();
+#else
+  // Android: Skip native doubles, use float-float emulation directly
+  qInfo() << "Android detected - using float-float emulation (OpenGL ES limitation)";
+#endif
 
   // Recreate program for fallback
   m_program = std::make_unique<QOpenGLShaderProgram>();

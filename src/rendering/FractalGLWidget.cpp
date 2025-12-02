@@ -107,7 +107,8 @@ void FractalGLWidget::updateUniforms() {
   // Check if we're using native double precision or float-float emulation
   if (m_shaderManager.isUsingNativeDoubles()) {
     // Native double precision - use OpenGL directly for double uniforms
-    // Qt's setUniformValue doesn't support doubles, so we use raw OpenGL
+    // Note: glUniform1d only exists in desktop OpenGL, not OpenGL ES (Android/iOS)
+#ifndef __ANDROID__
     GLint loc;
 
     loc = program->uniformLocation("u_zoomCenter_x");
@@ -121,6 +122,7 @@ void FractalGLWidget::updateUniforms() {
     loc = program->uniformLocation("u_zoomSize");
     if (loc != -1)
       glUniform1d(loc, m_state.zoomSize);
+#endif
   } else {
     // Float-float emulation - split doubles into hi/lo pairs
     DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
