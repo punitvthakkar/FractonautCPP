@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QTouchEvent>
 #include <QWheelEvent>
 #include <cmath>
 
@@ -103,63 +104,130 @@ void FractalGLWidget::updateUniforms() {
   program->setUniformValue("u_resolution",
                            QVector2D(width() * dpr, height() * dpr));
 
-  // Zoom Center (Double Precision Emulation)
-  DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
-  DoubleSplit centerY = splitDouble(m_state.zoomCenterY);
-  DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+  // Check if we're using native double precision or float-float emulation
+  if (m_shaderManager.isUsingNativeDoubles()) {
+    // Native double precision - use OpenGL directly for double uniforms
+    // Note: glUniform1d only exists in desktop OpenGL, not OpenGL ES (Android/iOS)
+#ifndef __ANDROID__
+    GLint loc;
 
-  program->setUniformValue("u_zoomCenter_x_hi", centerX.hi);
-  program->setUniformValue("u_zoomCenter_x_lo", centerX.lo);
-  program->setUniformValue("u_zoomCenter_y_hi", centerY.hi);
-  program->setUniformValue("u_zoomCenter_y_lo", centerY.lo);
-  program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
-  program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
+    loc = program->uniformLocation("u_zoomCenter_x");
+    if (loc != -1)
+      glUniform1d(loc, m_state.zoomCenterX);
 
-  // Other uniforms
-  program->setUniformValue("u_maxIterations", m_state.maxIterations);
+    loc = program->uniformLocation("u_zoomCenter_y");
+    if (loc != -1)
+      glUniform1d(loc, m_state.zoomCenterY);
+
+    loc = program->uniformLocation("u_zoomSize");
+    if (loc != -1)
+      glUniform1d(loc, m_state.zoomSize);
+#endif
+  } else {
+    // Float-float emulation - split doubles into hi/lo pairs
+    DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
+    DoubleSplit centerY = splitDouble(m_state.zoomCenterY);
+    DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+
+    program->setUniformValue("u_zoomCenter_x_hi", centerX.hi);
+    program->setUniformValue("u_zoomCenter_x_lo", centerX.lo);
+    program->setUniformValue("u_zoomCenter_y_hi", centerY.hi);
+    program->setUniformValue("u_zoomCenter_y_lo", centerY.lo);
+    program->setUniformValue("u_zoomSize_hi", zoomSize.hi);
+    program->setUniformValue("u_zoomSize_lo", zoomSize.lo);
+  }
+
+  // Other uniforms - Scale iterations based on zoom for better detail at deep zooms
+  int effectiveIterations = m_state.maxIterations;
+  if (m_state.zoomSize < 1e-6) {
+    // At extreme zooms, increase iterations for better detail
+    effectiveIterations =
+        std::min(10000, static_cast<int>(m_state.maxIterations * 1.5));
+  } else if (m_state.zoomSize < 1e-4) {
+    effectiveIterations =
+        std::min(10000, static_cast<int>(m_state.maxIterations * 1.2));
+  }
+  program->setUniformValue("u_maxIterations", effectiveIterations);
   program->setUniformValue("u_paletteId", m_state.paletteId);
   program->setUniformValue("u_fractalType", m_state.fractalType);
   program->setUniformValue("u_juliaC",
                            QVector2D(m_state.juliaCx, m_state.juliaCy));
 
-  // High precision flag - Enable much earlier to avoid pixelation
-  // Also ensure it's on for deep zooms
-  // DEBUG: Force true to verify if logic is the issue
-  bool highPrecision =
-      true; // m_state.zoomSize < 0.1 && m_state.fractalType < 2;
-  program->setUniformValue("u_highPrecision", highPrecision);
-
-  // DEBUG: Print split values for the coordinates causing issues
-  static int debugCounter = 0;
-  if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
-    // Test coordinate from user report
-    double testVal = -0.9197790506151321;
-    DoubleSplit split = splitDouble(testVal);
-    qDebug() << "--- Split Logic Verification ---";
-    qDebug() << "Input:" << QString::number(testVal, 'g', 17);
-    qDebug() << "Hi:" << QString::number(split.hi, 'g', 9);
-    qDebug() << "Lo:" << QString::number(split.lo, 'g', 9);
-    qDebug() << "Reconstructed:"
-             << QString::number((double)split.hi + (double)split.lo, 'g', 17);
-    qDebug() << "Error:"
-             << QString::number(testVal - ((double)split.hi + (double)split.lo),
-                                'g', 17);
+  // High precision flag - only needed for float-float emulation
+  if (!m_shaderManager.isUsingNativeDoubles()) {
+    bool highPrecision = true; // Always use high precision with float-float
+    program->setUniformValue("u_highPrecision", highPrecision);
   }
 
-  // DEBUG: Print split values for the coordinates causing issues
-  // static int debugCounter = 0; // This was moved above
+  // DEBUG: Print precision info
+  static int debugCounter = 0;
   if (debugCounter++ % 300 == 0) { // Print every ~5 seconds
-    qDebug() << "Center X:" << m_state.zoomCenterX;
-    qDebug() << "Split X:" << centerX.hi << centerX.lo;
-    qDebug() << "High Precision:" << highPrecision;
+    qDebug() << "=== PRECISION DEBUG ===";
+    qDebug() << "Mode:"
+             << (m_shaderManager.isUsingNativeDoubles()
+                     ? "NATIVE DOUBLE (64-bit)"
+                     : "Float-Float Emulation");
+    qDebug() << "Center X:" << QString::number(m_state.zoomCenterX, 'g', 17);
+    qDebug() << "Center Y:" << QString::number(m_state.zoomCenterY, 'g', 17);
+    qDebug() << "Zoom Size:" << QString::number(m_state.zoomSize, 'g', 9);
+
+    if (!m_shaderManager.isUsingNativeDoubles()) {
+      DoubleSplit centerX = splitDouble(m_state.zoomCenterX);
+      DoubleSplit zoomSize = splitDouble(m_state.zoomSize);
+      qDebug() << "  Split X Hi:" << QString::number(centerX.hi, 'g', 9);
+      qDebug() << "  Split X Lo:" << QString::number(centerX.lo, 'g', 9);
+      qDebug() << "  Reconstructed:"
+               << QString::number((double)centerX.hi + (double)centerX.lo, 'g',
+                                  17);
+      qDebug() << "  Split Error:"
+               << QString::number(
+                      m_state.zoomCenterX -
+                          ((double)centerX.hi + (double)centerX.lo),
+                      'g', 9);
+    }
+
+    // Calculate expected pixel precision at this zoom
+    double pixelSize = m_state.zoomSize / height();
+    qDebug() << "Pixel Size (fractal units):"
+             << QString::number(pixelSize, 'e', 2);
+    qDebug() << "Effective Iterations:" << effectiveIterations;
+    qDebug() << "======================";
   }
 }
 
 FractalGLWidget::DoubleSplit FractalGLWidget::splitDouble(double value) {
-  // Emulate splitDouble from JS/GLSL
-  // Simple cast method is most robust for passing double as two floats
+  // Proper Dekker-style split for double -> float-float conversion
+  // This creates a non-overlapping representation where hi + lo = value
+  // with minimal precision loss
+
+  // Step 1: Get the high part (first float approximation)
   float hi = static_cast<float>(value);
-  float lo = static_cast<float>(value - static_cast<double>(hi));
+
+  // Step 2: Compute the residual in double precision (critical!)
+  // This captures all the bits that didn't fit in the float
+  double hi_as_double = static_cast<double>(hi);
+  double residual = value - hi_as_double;
+
+  // Step 3: Get the low part (what remains)
+  float lo = static_cast<float>(residual);
+
+  // Step 4: Renormalize for non-overlapping representation
+  // This ensures hi and lo don't overlap in their bit representation
+  // Uses the "quick-two-sum" algorithm
+  double sum_d = static_cast<double>(hi) + static_cast<double>(lo);
+  float sum_f = static_cast<float>(sum_d);
+
+  // Compute the error in the sum
+  double sum_as_double = static_cast<double>(sum_f);
+  double error = residual - (sum_as_double - hi_as_double);
+  float error_f = static_cast<float>(error);
+
+  // Return the normalized pair
+  // If sum_f is different from hi, we need to renormalize
+  if (sum_f != hi) {
+    return {sum_f, error_f};
+  }
+
   return {hi, lo};
 }
 
@@ -292,23 +360,80 @@ void FractalGLWidget::wheelEvent(QWheelEvent *event) {
   // Don't call update() here, let animate() handle the interpolation
 }
 
+void FractalGLWidget::printDebugCoordinates() {
+  qDebug() << "--- Debug Coordinates ---";
+  qDebug() << "X:" << QString::number(m_state.zoomCenterX, 'g', 16);
+  qDebug() << "Y:" << QString::number(m_state.zoomCenterY, 'g', 16);
+  qDebug() << "Zoom:" << QString::number(m_state.zoomSize, 'g', 16);
+  qDebug() << "Precision Mode:"
+           << (m_shaderManager.isUsingNativeDoubles() ? "Native Double"
+                                                       : "Float-Float");
+  qDebug() << "Pixel Size:"
+           << QString::number(m_state.zoomSize / height(), 'e', 2);
+  qDebug() << "-------------------------";
+}
+
+void FractalGLWidget::copyCoordinatesToClipboard() {
+  QString coords =
+      QString("X: %1\nY: %2\nZoom: %3\nPrecision: %4\nPixel Size: %5")
+          .arg(QString::number(m_state.zoomCenterX, 'g', 16))
+          .arg(QString::number(m_state.zoomCenterY, 'g', 16))
+          .arg(QString::number(m_state.zoomSize, 'g', 16))
+          .arg(m_shaderManager.isUsingNativeDoubles() ? "Native Double"
+                                                       : "Float-Float")
+          .arg(QString::number(m_state.zoomSize / height(), 'e', 2));
+
+  QApplication::clipboard()->setText(coords);
+  qDebug() << "Coordinates copied to clipboard!";
+  qDebug() << coords;
+}
+
+// Touch event handler for Android
+bool FractalGLWidget::event(QEvent *event) {
+  if (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchEnd ||
+      event->type() == QEvent::TouchUpdate) {
+    QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
+
+    if (event->type() == QEvent::TouchBegin) {
+      m_touchTimer.start();
+      m_touchCount++;
+
+      // Get first touch point position
+      const auto &touchPoints = touchEvent->points();
+      if (!touchPoints.isEmpty()) {
+        m_lastTouchPos = touchPoints.first().position();
+      }
+    } else if (event->type() == QEvent::TouchEnd) {
+      qint64 elapsed = m_touchTimer.elapsed();
+
+      // Double-tap: Copy coordinates (< 300ms between taps)
+      if (m_touchCount == 2 && elapsed < 300) {
+        copyCoordinatesToClipboard();
+        m_touchCount = 0;
+      }
+      // Long press: Print debug info (> 800ms)
+      else if (elapsed > 800) {
+        printDebugCoordinates();
+        m_touchCount = 0;
+      }
+      // Reset counter after delay
+      else {
+        QTimer::singleShot(300, [this]() { m_touchCount = 0; });
+      }
+    }
+
+    return true;
+  }
+
+  return QOpenGLWidget::event(event);
+}
+
 void FractalGLWidget::keyPressEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_P) {
-    qDebug() << "--- Debug Coordinates ---";
-    qDebug() << "X:" << QString::number(m_state.zoomCenterX, 'g', 16);
-    qDebug() << "Y:" << QString::number(m_state.zoomCenterY, 'g', 16);
-    qDebug() << "Zoom:" << QString::number(m_state.zoomSize, 'g', 16);
-    qDebug() << "High Precision:" << (m_state.zoomSize < 0.1);
-    qDebug() << "-------------------------";
+    printDebugCoordinates();
   }
   if (event->key() == Qt::Key_C) {
-    QString coords = QString("X: %1\nY: %2\nZoom: %3")
-                         .arg(QString::number(m_state.zoomCenterX, 'g', 16))
-                         .arg(QString::number(m_state.zoomCenterY, 'g', 16))
-                         .arg(QString::number(m_state.zoomSize, 'g', 16));
-
-    QApplication::clipboard()->setText(coords);
-    qDebug() << "Coordinates copied to clipboard!";
+    copyCoordinatesToClipboard();
   }
   QOpenGLWidget::keyPressEvent(event);
 }

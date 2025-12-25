@@ -4,7 +4,7 @@
 #include "Constants.h"
 #include "ShaderManager.h"
 #include <QElapsedTimer>
-#include <QOpenGLFunctions>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLTexture>
 #include <QOpenGLWidget>
 #include <QTimer>
@@ -15,7 +15,7 @@
  * Handles the rendering loop, shader uniforms, and palette texture generation.
  * Implements the core rendering logic ported from WebGL.
  */
-class FractalGLWidget : public QOpenGLWidget, protected QOpenGLFunctions {
+class FractalGLWidget : public QOpenGLWidget, protected QOpenGLExtraFunctions {
   Q_OBJECT
 
 public:
@@ -34,6 +34,9 @@ protected:
   void wheelEvent(QWheelEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
 
+  // Touch interaction (for Android)
+  bool event(QEvent *event) override;
+
 private slots:
   void animate();
 
@@ -41,6 +44,10 @@ private:
   void createPaletteTexture();
   void updateUniforms();
   void updatePhysics(double deltaTime);
+
+  // Helper functions for coordinate display/copy
+  void copyCoordinatesToClipboard();
+  void printDebugCoordinates();
 
   // Helper to split double for emulated precision (Dekker's algorithm)
   struct DoubleSplit {
@@ -63,6 +70,11 @@ private:
   bool m_isDragging;
   QPointF m_lastMousePos;
   QPointF m_velocity;
+
+  // Touch gesture tracking (for Android)
+  QElapsedTimer m_touchTimer;
+  QPointF m_lastTouchPos;
+  int m_touchCount = 0;
 
   // State
   struct State {
